@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "nome": "Organismo Gravitacional — ciclo completo",
+    "duracao_s": 15,
+    "fps_alvo": 60,
+    "loop": true,
+    "descricao": "Partitura da animação: do acionamento por uma query até a multiplicação (meiose) e divisão (mitose) dos átomos."
+  },
+  "campo": { "count": 90, "seed": 42, "raio": 55 },
+  "centro": { "cor": "#ffffff", "raio": 2.4 },
+  "temas": [
+    { "id": "dados",       "cor": "#3b82f6" },
+    { "id": "conteudo",    "cor": "#a855f7" },
+    { "id": "neurodesign", "cor": "#f59e0b" },
+    { "id": "clientes",    "cor": "#22c55e" },
+    { "id": "sistema",     "cor": "#64748b" }
+  ],
+  "orbita": { "N": 14, "raio": 14, "velocidade": 0.9 },
+  "fisica": {
+    "lei": "F = score · massa^alpha",
+    "repulsao_offcolonia": 0.6,
+    "hebbiano_pull": 0.15,
+    "decaimento": 0.0
+  },
+  "protagonistas": {
+    "meiose": { "paiA_tema": "dados", "paiB_tema": "conteudo", "filho_cor": "#e879f9" },
+    "mitose": { "gigante_tema": "sistema", "n_sombras": 2 }
+  },
+  "fases": [
+    { "t0": 0.0,  "t1": 2.0,  "nome": "Repouso",            "desc": "o campo em descanso — tamanho=massa, cor=tema" },
+    { "t0": 2.0,  "t1": 3.0,  "nome": "A chamada",          "desc": "a query pulsa no centro e vira onda instantânea" },
+    { "t0": 3.0,  "t1": 5.5,  "nome": "Atração",            "desc": "os ressonantes são puxados; os não-afins recuam" },
+    { "t0": 5.5,  "t1": 8.0,  "nome": "Órbita + fragmento", "desc": "os 14 orbitam; o centro copia o fragmento de cada um" },
+    { "t0": 8.0,  "t1": 9.5,  "nome": "Síntese",            "desc": "o centro funde os fragmentos — nasce o resultado" },
+    { "t0": 9.5,  "t1": 11.0, "nome": "Retorno Hebbiano",   "desc": "voltam reposicionados; quem orbitou junto se aproxima" },
+    { "t0": 11.0, "t1": 13.0, "nome": "Meiose",             "desc": "dois cross-tema recombinam — nasce um filho com linhagem" },
+    { "t0": 13.0, "t1": 14.5, "nome": "Mitose",             "desc": "o gigante disputado se divide em sombras temáticas" },
+    { "t0": 14.5, "t1": 15.0, "nome": "Novo repouso",       "desc": "o campo assenta, mais rico — e recomeça" }
+  ]
+}

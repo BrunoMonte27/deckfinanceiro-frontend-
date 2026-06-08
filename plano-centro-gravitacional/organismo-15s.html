@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Organismo Gravitacional — 15s</title>
+<style>
+  html,body{margin:0;height:100%;background:#05060a;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e8eefc}
+  #hud{position:fixed;left:18px;top:16px;z-index:10;pointer-events:none;text-shadow:0 1px 8px #000}
+  #fase{font-size:22px;font-weight:700;letter-spacing:.2px}
+  #desc{font-size:13px;opacity:.72;margin-top:3px;max-width:60ch}
+  #t{font-size:11px;opacity:.5;margin-top:6px;font-variant-numeric:tabular-nums}
+  #bar{position:fixed;left:0;bottom:0;height:3px;background:#7aa2ff;z-index:10;box-shadow:0 0 10px #7aa2ff}
+  #legenda{position:fixed;right:16px;top:16px;z-index:10;font-size:12px;text-align:right;opacity:.85;pointer-events:none}
+  #legenda b{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px;vertical-align:middle}
+  #hint{position:fixed;left:18px;bottom:14px;z-index:10;font-size:11px;opacity:.45}
+</style>
+</head>
+<body>
+<div id="hud"><div id="fase">—</div><div id="desc"></div><div id="t"></div></div>
+<div id="legenda"></div>
+<div id="bar"></div>
+<div id="hint">clique = pausar · arraste = girar · loop 15s</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ───────────────────────── PARTITURA (idêntica ao organismo-15s.json) ─────────────────────────
+const SPEC = {
+  meta:{duracao_s:15,loop:true},
+  campo:{count:90,seed:42,raio:55},
+  centro:{cor:"#ffffff",raio:2.4},
+  temas:[
+    {id:"dados",cor:"#3b82f6"},{id:"conteudo",cor:"#a855f7"},{id:"neurodesign",cor:"#f59e0b"},
+    {id:"clientes",cor:"#22c55e"},{id:"sistema",cor:"#64748b"}
+  ],
+  orbita:{N:14,raio:14,velocidade:0.9},
+  protagonistas:{meiose:{paiA_tema:"dados",paiB_tema:"conteudo",filho_cor:"#e879f9"},mitose:{gigante_tema:"sistema",n_sombras:2}},
+  fases:[
+    {t0:0.0,t1:2.0,nome:"Repouso",desc:"o campo em descanso — tamanho = massa, cor = tema"},
+    {t0:2.0,t1:3.0,nome:"A chamada",desc:"a query pulsa no centro e vira onda instantânea"},
+    {t0:3.0,t1:5.5,nome:"Atração",desc:"os ressonantes são puxados; os não-afins recuam (repulsão)"},
+    {t0:5.5,t1:8.0,nome:"Órbita + fragmento",desc:"os 14 orbitam o poço; o centro copia o fragmento de cada um"},
+    {t0:8.0,t1:9.5,nome:"Síntese",desc:"o centro funde os fragmentos — nasce o resultado"},
+    {t0:9.5,t1:11.0,nome:"Retorno Hebbiano",desc:"voltam reposicionados; quem orbitou junto se aproxima"},
+    {t0:11.0,t1:13.0,nome:"Meiose",desc:"dois cross-tema recombinam — nasce um filho com linhagem"},
+    {t0:13.0,t1:14.5,nome:"Mitose",desc:"o gigante disputado se divide em sombras temáticas"},
+    {t0:14.5,t1:15.0,nome:"Novo repouso",desc:"o campo assenta, mais rico — e recomeça"}
+  ]
+};
+const DUR = SPEC.meta.duracao_s;
+
+// ───────────────────────── helpers ─────────────────────────
+const clamp=(x,a,b)=>x<a?a:x>b?b:x;
+const lerp=(a,b,k)=>a+(b-a)*k;
+const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
+const inwin=(t,a,b)=>t>=a&&t<=b;
+function bump(t,a,b){ if(t<a||t>b)return 0; const m=(a+b)/2; return smooth(1-Math.abs((t-m)/((b-a)/2))); }
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+// ───────────────────────── cena ─────────────────────────
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x05060a,0.0042);
+const cam=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,0.1,2000);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+// glow sprite texture
+function glowTex(){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
+  const gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.28,'rgba(255,255,255,.55)');gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=gr;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
+const GLOW=glowTex();
+
+// estrelas de fundo (profundidade)
+(function(){const g=new THREE.BufferGeometry();const n=900,p=new Float32Array(n*3);
+  for(let i=0;i<n;i++){const r=400+Math.random()*600,th=Math.random()*6.28,ph=Math.acos(2*Math.random()-1);
+    p[i*3]=r*Math.sin(ph)*Math.cos(th);p[i*3+1]=r*Math.sin(ph)*Math.sin(th);p[i*3+2]=r*Math.cos(ph);}
+  g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x223055,size:1.4,sizeAttenuation:false})));})();
+
+const rand=mulberry32(SPEC.campo.seed);
+const R=SPEC.campo.raio;
+const temaCor={}, temaDir={};
+SPEC.temas.forEach((tm,i)=>{
+  temaCor[tm.id]=new THREE.Color(tm.cor);
+  const th=(i/SPEC.temas.length)*6.283+rand()*0.6, ph=Math.acos(2*((i+0.5)/SPEC.temas.length)-1);
+  temaDir[tm.id]=new THREE.Vector3(Math.sin(ph)*Math.cos(th),Math.cos(ph)*0.7,Math.sin(ph)*Math.sin(th)).normalize();
+});
+
+// geometria base do átomo
+const SPH=new THREE.SphereGeometry(0.62,14,14);
+const WHITE=new THREE.Color(0xffffff);
+
+function mkAtom(tema,massa,home){
+  const baseCor=temaCor[tema].clone();
+  const mat=new THREE.MeshBasicMaterial({color:baseCor.clone()});
+  const mesh=new THREE.Mesh(SPH,mat); mesh.position.copy(home); mesh.scale.setScalar(massa);
+  const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:baseCor.clone(),transparent:true,opacity:.15,blending:THREE.AdditiveBlending,depthWrite:false}));
+  halo.scale.setScalar(massa*2.6); mesh.add(halo);
+  scene.add(mesh);
+  return {tema,massa,home:home.clone(),newHome:home.clone(),mesh,mat,halo,baseCor,orbitAngle:0,recruited:false,role:null};
+}
+
+// ── popular o campo (colônias por tema) ──
+const atoms=[];
+const temaIds=SPEC.temas.map(t=>t.id);
+for(let i=0;i<SPEC.campo.count;i++){
+  const tema=temaIds[Math.floor(rand()*temaIds.length)];
+  let massa=0.6+rand()*1.6;
+  const dir=temaDir[tema].clone();
+  const home=dir.multiplyScalar(R*(0.45+rand()*0.5))
+    .add(new THREE.Vector3((rand()-.5),(rand()-.5),(rand()-.5)).multiplyScalar(R*0.42));
+  atoms.push(mkAtom(tema,massa,home));
+}
+// um gigante de 'sistema' p/ a mitose
+const giganteTema=SPEC.protagonistas.mitose.gigante_tema;
+let gigante=atoms.filter(a=>a.tema===giganteTema).sort((a,b)=>b.massa-a.massa)[0];
+if(!gigante){gigante=atoms[0];gigante.tema=giganteTema;gigante.baseCor=temaCor[giganteTema].clone();}
+gigante.massa=3.0; gigante.mesh.scale.setScalar(3.0); gigante.halo.scale.setScalar(3.0*2.6);
+gigante.role="gigante";
+
+// ── escolher recrutados (região da "query" = entre dados e conteudo) ──
+const qDir=temaDir["dados"].clone().add(temaDir["conteudo"]).normalize();
+const pool=atoms.filter(a=>a!==gigante);
+pool.forEach(a=>{a._sc=a.home.clone().normalize().dot(qDir)+a.massa*0.05;});
+pool.sort((a,b)=>b._sc-a._sc);
+const N=Math.min(SPEC.orbita.N,pool.length);
+const recruited=pool.slice(0,N);
+recruited.forEach((a,i)=>{a.recruited=true;a.orbitAngle=(i/N)*6.283;});
+// centroide p/ reposição Hebbiana
+const centroid=new THREE.Vector3();
+recruited.forEach(a=>centroid.add(a.home)); centroid.multiplyScalar(1/N);
+recruited.forEach(a=>{a.newHome=a.home.clone().lerp(centroid,0.16);});
+
+// pais da meiose (cross-tema)
+let paiA=recruited.find(a=>a.tema==="dados")||recruited[0];
+let paiB=recruited.find(a=>a.tema==="conteudo"&&a!==paiA)||recruited[1];
+paiA.role="paiA"; paiB.role="paiB";
+const M=paiA.newHome.clone().add(paiB.newHome).multiplyScalar(0.5); // ponto médio = berço do filho
+
+// ── centro ──
+const centro=new THREE.Mesh(new THREE.SphereGeometry(SPEC.centro.raio,24,24),new THREE.MeshBasicMaterial({color:0xffffff}));
+scene.add(centro);
+const centroHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:0x9fc0ff,transparent:true,opacity:.5,blending:THREE.AdditiveBlending,depthWrite:false}));
+centroHalo.scale.setScalar(10); scene.add(centroHalo);
+
+// ── onda da chamada ──
+const onda=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),new THREE.MeshBasicMaterial({color:0x7aa2ff,transparent:true,opacity:0,wireframe:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+scene.add(onda);
+// ── burst da síntese ──
+const burst=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),new THREE.MeshBasicMaterial({color:0xffe9a8,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+scene.add(burst);
+
+// ── teia (centro → recrutados) ──
+const teiaPos=new Float32Array(N*2*3);
+const teiaGeo=new THREE.BufferGeometry(); teiaGeo.setAttribute('position',new THREE.BufferAttribute(teiaPos,3));
+const teia=new THREE.LineSegments(teiaGeo,new THREE.LineBasicMaterial({color:0x88aaff,transparent:true,opacity:0,blending:THREE.AdditiveBlending}));
+scene.add(teia);
+
+// ── fragmentos (átomo → centro) ──
+const frags=recruited.map(()=>{
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:0xffffff,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+  s.scale.setScalar(1.6); scene.add(s); return s;
+});
+
+// ── filho da meiose ──
+const filhoCor=new THREE.Color(SPEC.protagonistas.meiose.filho_cor);
+const filho=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:filhoCor.clone(),transparent:true,opacity:0}));
+filho.position.copy(M); filho.scale.setScalar(0.01); scene.add(filho);
+const filhoHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:filhoCor.clone(),transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+filho.add(filhoHalo); filhoHalo.scale.setScalar(4);
+const linMeiosePos=new Float32Array(2*2*3);
+const linMeioseGeo=new THREE.BufferGeometry(); linMeioseGeo.setAttribute('position',new THREE.BufferAttribute(linMeiosePos,3));
+const linMeiose=new THREE.LineSegments(linMeioseGeo,new THREE.LineBasicMaterial({color:filhoCor.getHex(),transparent:true,opacity:0,blending:THREE.AdditiveBlending}));
+scene.add(linMeiose);
+
+// ── sombras da mitose ──
+const nS=SPEC.protagonistas.mitose.n_sombras;
+const sombraDirs=["dados","clientes"]; // pra onde o gigante é disputado
+const sombras=[];
+for(let i=0;i<nS;i++){
+  const tm=sombraDirs[i%sombraDirs.length];
+  const m=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:temaCor[tm].clone(),transparent:true,opacity:0}));
+  m.position.copy(gigante.home); m.scale.setScalar(0.01); scene.add(m);
+  const dest=gigante.home.clone().add(temaDir[tm].clone().multiplyScalar(R*0.22));
+  sombras.push({mesh:m,dest});
+}
+
+// ───────────────────────── animação ─────────────────────────
+function orbitPos(a,t){
+  const ang=a.orbitAngle+(t-5.5)*SPEC.orbita.velocidade;
+  const rr=SPEC.orbita.raio;
+  return new THREE.Vector3(Math.cos(ang)*rr,Math.sin(ang*0.7)*rr*0.28,Math.sin(ang)*rr);
+}
+const tmpC=new THREE.Color();
+
+function update(t){
+  // câmera (órbita lenta + leve aproximação na síntese)
+  const ca=t*0.16+0.6;
+  const cr=92-bump(t,7.8,9.6)*16;
+  cam.position.set(Math.cos(ca)*cr,18+Math.sin(t*0.22)*6,Math.sin(ca)*cr);
+  cam.lookAt(0,0,0);
+
+  // ÁTOMOS
+  for(const a of atoms){
+    let pos=a.home, act=0.12;
+    if(a.recruited){
+      if(t<2.8){ pos=a.home; act=0.12+bump(t,2.0,2.9)*0.5; }
+      else if(t<5.5){ const k=smooth((t-2.8)/2.7); pos=a.home.clone().lerp(orbitPos(a,5.5),k); act=lerp(0.2,1,k); }
+      else if(t<9.5){ pos=orbitPos(a,t); act=1; }
+      else if(t<11.0){ const k=smooth((t-9.5)/1.5); pos=orbitPos(a,9.5).lerp(a.newHome,k); act=lerp(1,0.16,k); }
+      else { pos=a.newHome; act=0.16; }
+      // meiose: pais convergem p/ flanco do berço
+      if((a.role==="paiA"||a.role==="paiB")&&t>=11.0){
+        const k=smooth((t-11.0)/1.1);
+        const flank=M.clone().add((a.role==="paiA"?paiA.newHome:paiB.newHome).clone().sub(M).multiplyScalar(0.45));
+        pos=a.newHome.clone().lerp(flank,k); act=Math.max(act,0.5+bump(t,11.0,13.0)*0.5);
+      }
+    } else {
+      // fundo: respiração + repulsão dos não-afins durante a atração
+      const breathe=Math.sin(t*0.7+a.home.x)*0.4;
+      let push=bump(t,3.0,5.5)*(a===gigante?0:0.10);
+      pos=a.home.clone().multiplyScalar(1+push).add(new THREE.Vector3(0,breathe,0));
+      act=0.10+bump(t,2.2,3.2)*a.home.clone().normalize().dot(qDir)*0.5; // onda toca os do lado da query
+      act=clamp(act,0.08,0.7);
+    }
+    a.mesh.position.copy(pos);
+    // brilho: núcleo clareia, halo cresce
+    tmpC.copy(a.baseCor).lerp(WHITE,act*0.55); a.mat.color.copy(tmpC);
+    a.halo.material.opacity=0.12+act*0.85;
+    a.halo.scale.setScalar(a.massa*(2.2+act*2.2));
+  }
+
+  // CENTRO (pulso na chamada · acúmulo na órbita · flash na síntese)
+  let cb=0.45+bump(t,2.0,2.6)*0.7+smooth(clamp((t-5.5)/2.5,0,1))*0.5*(t<9.5?1:0);
+  cb+=bump(t,8.0,9.2)*1.4;
+  centro.scale.setScalar(1+bump(t,2.0,2.6)*0.5+bump(t,8.0,9.2)*0.8);
+  centroHalo.material.opacity=clamp(cb,0,1.6);
+  centroHalo.scale.setScalar(9+cb*9);
+
+  // ONDA
+  if(inwin(t,2.0,3.3)){const k=(t-2.0)/1.3; onda.scale.setScalar(0.5+k*R*1.6); onda.material.opacity=(1-k)*0.55;}
+  else onda.material.opacity=0;
+
+  // BURST síntese
+  if(inwin(t,8.0,9.4)){const k=(t-8.0)/1.4; burst.scale.setScalar(0.5+k*38); burst.material.opacity=(1-k)*0.5;}
+  else burst.material.opacity=0;
+
+  // TEIA
+  const teiaOp=(inwin(t,3.2,9.5))?(0.06+smooth(clamp((t-3.2)/1.2,0,1))*0.5*(t<9.0?1:smooth((9.5-t)/0.5))):0;
+  teia.material.opacity=teiaOp;
+  if(teiaOp>0){ recruited.forEach((a,i)=>{const b=i*6; const p=a.mesh.position;
+    teiaPos[b]=0;teiaPos[b+1]=0;teiaPos[b+2]=0; teiaPos[b+3]=p.x;teiaPos[b+4]=p.y;teiaPos[b+5]=p.z;});
+    teiaGeo.attributes.position.needsUpdate=true; }
+
+  // FRAGMENTOS (átomo → centro, durante a órbita)
+  recruited.forEach((a,i)=>{const s=frags[i];
+    if(inwin(t,5.7,8.2)){const u=((t-5.7)*0.85+i*0.13)%1; const p=a.mesh.position.clone().lerp(new THREE.Vector3(0,0,0),u);
+      s.position.copy(p); s.material.opacity=Math.sin(Math.PI*u)*0.9;} else s.material.opacity=0;});
+
+  // MEIOSE — o filho nasce no ponto médio
+  if(t>=11.5){const k=smooth((t-11.5)/1.2);
+    filho.scale.setScalar(0.01+k*1.05); filho.material.opacity=k;
+    filhoHalo.material.opacity=0.2+k*0.7+bump(t,12.0,13.0)*0.4; filhoHalo.scale.setScalar(3+k*3);
+    // linhagem: pai → filho
+    const a=paiA.mesh.position,b=paiB.mesh.position,c=filho.position;
+    linMeiosePos.set([a.x,a.y,a.z,c.x,c.y,c.z, b.x,b.y,b.z,c.x,c.y,c.z]);
+    linMeioseGeo.attributes.position.needsUpdate=true; linMeiose.material.opacity=k*0.8;
+  } else {filho.material.opacity=0;filhoHalo.material.opacity=0;linMeiose.material.opacity=0;filho.scale.setScalar(0.01);}
+
+  // MITOSE — o gigante se divide em sombras
+  if(t>=13.0){const k=smooth((t-13.0)/1.4);
+    gigante.mesh.scale.setScalar(3.0*(1-0.35*k));
+    sombras.forEach(s=>{s.mesh.position.copy(gigante.home.clone().lerp(s.dest,k)); s.mesh.scale.setScalar(0.01+k*1.5); s.mesh.material.opacity=k*0.95;});
+  } else {gigante.mesh.scale.setScalar(3.0); sombras.forEach(s=>{s.mesh.material.opacity=0;s.mesh.scale.setScalar(0.01);});}
+
+  // HUD
+  const f=SPEC.fases.find(f=>t>=f.t0&&t<f.t1)||SPEC.fases[SPEC.fases.length-1];
+  fase.textContent=f.nome; desc.textContent=f.desc;
+  tEl.textContent=t.toFixed(1)+"s / "+DUR+"s";
+  bar.style.width=(t/DUR*100)+"%";
+}
+
+// legenda de temas
+legenda.innerHTML=SPEC.temas.map(tm=>tm.id+" <b style='background:"+tm.cor+"'></b>").join("<br>");
+const fase=document.getElementById('fase'),desc=document.getElementById('desc'),tEl=document.getElementById('t'),bar=document.getElementById('bar');
+
+// loop + pausa + arrastar
+let start=performance.now(),paused=false,pT=0;
+renderer.domElement.addEventListener('click',()=>{if(paused){start=performance.now()-pT*1000;}else{pT=((performance.now()-start)/1000)%DUR;}paused=!paused;});
+let drag=false,px=0,camOff=0;
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;});
+addEventListener('pointerup',()=>drag=false);
+addEventListener('pointermove',e=>{if(drag){camOff+=(e.clientX-px)*0.01;px=e.clientX;}});
+
+function frame(){
+  requestAnimationFrame(frame);
+  const t=paused?pT:((performance.now()-start)/1000)%DUR;
+  update(t);
+  // aplica o arrasto manual girando a cena
+  scene.rotation.y=camOff;
+  renderer.render(scene,cam);
+}
+frame();
+</script>
+</body>
+</html>
