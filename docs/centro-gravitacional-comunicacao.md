@@ -260,7 +260,36 @@ num **playbook**.
 
 ---
 
-## 11. Decisões travadas (resumo)
+## 11. Visibilidade no cold-start (por que o mapa parece liso)
+
+Os 4 canais renderizam **diferenças de dado**. Sem lastro, o dado está
+uniforme — então o mapa parece liso. Mas nem todos os canais precisam de
+co-uso real:
+
+| Canal | Dirigido por | Visível no cold-start? |
+|---|---|---|
+| **Tamanho** | `massa` | ✅ **Sim** — *se* semeada de sinal estático |
+| **Brilho** | `idade` | ✅ **Sim** — vem da data do arquivo |
+| **Aresta quente** | `w_ij` | ❌ Não — tudo `w=1` até haver co-uso |
+| **Órbita** | atividade do turno | ❌ Não num mapa parado — só ao vivo numa query |
+
+Para o mapa **não** nascer liso, o grav-build deve **semear** massa e idade
+de sinais que já existem antes de qualquer co-uso:
+
+- **`massa` inicial** ← combinação de: grau no grafo (quantos vizinhos),
+  tamanho/riqueza do doc, e se está no centro gravitacional.
+- **`idade` inicial** ← data de criação/modificação do arquivo.
+
+Assim, ao abrir o cosmos pela 1ª vez, **tamanho e brilho já variam**. As
+arestas quentes e a órbita só acendem com uso real — isso é esperado, não bug.
+
+> Diagnóstico rápido: se até tamanho/brilho estão lisos, ou o grav-build não
+> rodou (falta `BRU_GRAV_BUILD=1 ... build_graph.py` + recarregar), ou ele
+> não semeia desses sinais estáticos. Os dois primeiros canais são o teste.
+
+---
+
+## 12. Decisões travadas (resumo)
 
 1. **Escopo da meiose:** receitas inteiras + duplas alma-gêmea com barra alta.
 2. **Posição do filho:** entre os pais, com tag de origem (linhagem).
