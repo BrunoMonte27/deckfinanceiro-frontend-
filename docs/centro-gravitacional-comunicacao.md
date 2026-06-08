@@ -216,7 +216,51 @@ Assim o centro gravitacional reflete sempre o que **está funcionando agora**.
 
 ---
 
-## 10. Decisões travadas (resumo)
+## 10. Diagrama do mapa gravitacional
+
+O contrato de dados completo está em [`schema/atomos.ts`](../schema/atomos.ts).
+Visualmente, o mapa orbita um núcleo e cruza domínios:
+
+```mermaid
+flowchart TB
+    subgraph CENTRO["☀️ Centro gravitacional (identidade da marca)"]
+        sol["átomos de massa alta<br/>posicionamento"]
+    end
+
+    subgraph DADOS["🔵 Domínio: dados"]
+        d1["enquete dobra resposta"]
+    end
+    subgraph CONTEUDO["🟣 Domínio: conteúdo"]
+        c1["arco tensão→virada→alívio"]
+    end
+    subgraph NEURO["🟠 Domínio: neurodesign"]
+        n1["CTA quente p/ ansioso"]
+    end
+    subgraph CLIENTES["🟢 Domínio: clientes"]
+        cl1["PJ responde a prova social"]
+    end
+
+    sol -. gravidade .-> DADOS & CONTEUDO & NEURO & CLIENTES
+
+    d1 ==="w_ij alto"=== c1
+    d1 & c1 --> filho(["✨ MEIOSE cross-domínio<br/>'stories guiados por dados'<br/>(nasce entre os pais · linhagem)"])
+
+    DADOS & CONTEUDO & NEURO & CLIENTES -. N sucessos .-> pb[["📘 PLAYBOOK<br/>'campanha de stories de interação'"]]
+
+    classDef sintese fill:#fde68a,stroke:#d97706,color:#000;
+    classDef playbook fill:#bfdbfe,stroke:#2563eb,color:#000;
+    class filho sintese;
+    class pb playbook;
+```
+
+**Como ler:** linhas pontilhadas = gravidade (atração). Linha grossa
+`w_ij alto` = duas almas-gêmeas → geram um **filho de síntese** no ponto
+médio, com linhagem. A constelação inteira, após **N sucessos**, cristaliza
+num **playbook**.
+
+---
+
+## 11. Decisões travadas (resumo)
 
 1. **Escopo da meiose:** receitas inteiras + duplas alma-gêmea com barra alta.
 2. **Posição do filho:** entre os pais, com tag de origem (linhagem).
