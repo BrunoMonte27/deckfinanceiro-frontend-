@@ -1,0 +1,98 @@
+{
+  "_meta": {
+    "nome": "Centro Gravitacional — contrato de botões",
+    "descricao": "Constantes que build_graph.py e bru_retrieve.py LEEM em vez de hardcode. Tunar aqui = tunar o sistema sem editar código.",
+    "alvo_mac": "~/Documents/Teste-HandsFree/bru_config.json",
+    "lido_por": ["opal-galaxy-3d/build_graph.py", "backend/bru_retrieve.py", "opal-os/cosmos3d.html (via /api/galaxy/config)"],
+    "regra_mae": "Só os ativos se mexem e voltam. O campo só muda pelo uso. Dado real antes de inteligência. Runtime $0: nunca API paga.",
+    "versao": 1
+  },
+
+  "build_graph": {
+    "layout": {
+      "seed": 42,
+      "iters": 80,
+      "warp_exp": 0.62,
+      "sphere_radius": 480,
+      "warm_start": true
+    },
+    "massa": {
+      "_doc": "m = w_densidade*densidade_norm + w_couso*couso_norm. SEM autoridade, SEM recência. Monotônica.",
+      "w_densidade": 0.5,
+      "w_couso": 0.5,
+      "densidade_componentes": ["grau_wikilinks", "len_conteudo", "n_headings"],
+      "normalize": "minmax",
+      "scale_visual": 4
+    },
+    "hebb": {
+      "_doc": "co-uso (cooccurrence.jsonl) -> w_ij = 1 + Kw*tanh(couso). tau = janela de relevância.",
+      "Kw": 3,
+      "tau": 90
+    },
+    "playbook_deteccao": {
+      "_doc": "Átomo-ponte cross-colônia co-usado N× vira âncora pb (já existe). Limiar:",
+      "PB_THRESH": 3
+    },
+    "decay": {
+      "_doc": "Decaimento DESLIGADO por decisão (campo só move pelo uso). Botão futuro: recência suave no co-uso.",
+      "valor": 0.0
+    }
+  },
+
+  "retrieve": {
+    "bm25": {
+      "k1": 1.5,
+      "b": 0.75,
+      "name_idf_boost": 4.0
+    },
+    "floor_score": 3.0,
+    "k_chat": 4,
+    "constelacao": {
+      "_doc": "retrieve_constellation (BRUU_CONST) — cobertura×coesão. anchor_top protege precisão do gold-set.",
+      "k_max": 18,
+      "LAMB": 1.5,
+      "DIV": 0.6,
+      "anchor_top": 5
+    },
+    "atracao": {
+      "_doc": "Lei híbrida ADAPTADA ao sistema real: ressonância = score de retrieval (BM25+sem). NÃO usa distância euclidiana (que é só viz). F = score * massa^alpha. Repulsão abaixa score de não-afim.",
+      "alpha_massa": 1.0,
+      "beta_ressonancia": 1.0,
+      "repulsao_offcolonia": 0.6
+    }
+  },
+
+  "orbita": {
+    "_doc": "Orçamento de atenção visual = top-N que orbitam o poço no cosmos. Já existe aOrbit/aActive.",
+    "N": 14,
+    "forca_orbital": 0.35,
+    "atrito": 0.88,
+    "blaze_decay": 0.94,
+    "clamp": 38
+  },
+
+  "meiose": {
+    "_doc": "CRIAÇÃO ainda não construída (só detecção pb existe). Gatilhos e motor:",
+    "dupla_co_uso_cross": 12,
+    "dupla_co_uso_mesmo": 20,
+    "N_sucessos_playbook": 4,
+    "w_min": 3.0,
+    "llm": "claude-oauth",
+    "persistir_em": "opal-galaxy-3d/data/graph.json (nodes com origem=meiose)"
+  },
+
+  "mitose": {
+    "_doc": "100% nova. Divide gigante disputado por temas distintos em cópias fiéis ancoradas por tema.",
+    "temas_disputa": 2,
+    "co_uso_por_tema": 6,
+    "llm": "nenhum (cópia fiel, sem custo)"
+  },
+
+  "llm": {
+    "_doc": "Runtime $0. Síntese e meiose = Claude via OAuth Max ($0). Gemini só em geradorimg.py (imagens). NUNCA API paga no runtime.",
+    "sintese": "claude-oauth",
+    "meiose": "claude-oauth",
+    "fragmento": "_snippet (mecânico, sem LLM)",
+    "runtime_paid_api": false
+  }
+}
