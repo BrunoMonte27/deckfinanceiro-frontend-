@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Organismo Gravitacional — 15s · v2</title>
+<style>
+  html,body{margin:0;height:100%;background:#04050a;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#e8eefc}
+  #hud{position:fixed;left:18px;top:16px;z-index:10;pointer-events:none;text-shadow:0 1px 8px #000}
+  #fase{font-size:22px;font-weight:700}
+  #desc{font-size:13px;opacity:.72;margin-top:3px;max-width:62ch}
+  #t{font-size:11px;opacity:.5;margin-top:6px;font-variant-numeric:tabular-nums}
+  #bar{position:fixed;left:0;bottom:0;height:3px;background:#7aa2ff;z-index:10;box-shadow:0 0 12px #7aa2ff}
+  #legenda{position:fixed;right:16px;top:16px;z-index:10;font-size:12px;text-align:right;opacity:.85;pointer-events:none}
+  #legenda b{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px;vertical-align:middle}
+  #hint{position:fixed;left:18px;bottom:14px;z-index:10;font-size:11px;opacity:.45}
+  /* vinheta (Pilar IV: foco no centro) */
+  #vinheta{position:fixed;inset:0;z-index:5;pointer-events:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 48%,rgba(0,0,0,.55) 100%)}
+</style>
+</head>
+<body>
+<div id="hud"><div id="fase">—</div><div id="desc"></div><div id="t"></div></div>
+<div id="legenda"></div>
+<div id="vinheta"></div>
+<div id="bar"></div>
+<div id="hint">clique = pausar · arraste = girar · loop 15s · v2 (Fresnel · espaço-tempo · acreção · ACES)</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const SPEC = {
+  meta:{duracao_s:15},
+  campo:{count:90,seed:42,raio:55},
+  centro:{cor:"#ffffff",raio:2.4},
+  temas:[{id:"dados",cor:"#3b82f6"},{id:"conteudo",cor:"#a855f7"},{id:"neurodesign",cor:"#f59e0b"},{id:"clientes",cor:"#22c55e"},{id:"sistema",cor:"#64748b"}],
+  orbita:{N:14,raio:14,velocidade:0.9},
+  protagonistas:{meiose:{paiA_tema:"dados",paiB_tema:"conteudo",filho_cor:"#e879f9"},mitose:{gigante_tema:"sistema",n_sombras:2}},
+  // profundidade v2 (constantes — Pilar IV)
+  render:{rimPow:2.2,exposure:1.15,warpDepth:26,warpK:900,warpRings:14,warpSpokes:36,warpRmax:120,acrecao:220},
+  fases:[
+    {t0:0.0,t1:2.0,nome:"Repouso",desc:"o campo em descanso — tamanho = massa, cor = tema · a grade do espaço-tempo afunda no poço"},
+    {t0:2.0,t1:3.0,nome:"A chamada",desc:"a query pulsa no centro e vira onda — a grade ondula"},
+    {t0:3.0,t1:5.5,nome:"Atração",desc:"os ressonantes são puxados; os não-afins recuam"},
+    {t0:5.5,t1:8.0,nome:"Órbita + fragmento",desc:"os 14 orbitam; o disco de acreção espirala pra dentro"},
+    {t0:8.0,t1:9.5,nome:"Síntese",desc:"o centro funde os fragmentos — nasce o resultado"},
+    {t0:9.5,t1:11.0,nome:"Retorno Hebbiano",desc:"voltam reposicionados; quem orbitou junto se aproxima"},
+    {t0:11.0,t1:13.0,nome:"Meiose",desc:"dois cross-tema recombinam — nasce um filho com linhagem"},
+    {t0:13.0,t1:14.5,nome:"Mitose",desc:"o gigante disputado se divide em sombras temáticas"},
+    {t0:14.5,t1:15.0,nome:"Novo repouso",desc:"o campo assenta, mais rico — e recomeça"}
+  ]
+};
+const DUR=SPEC.meta.duracao_s, RC=SPEC.render;
+
+const clamp=(x,a,b)=>x<a?a:x>b?b:x, lerp=(a,b,k)=>a+(b-a)*k, smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);}, inwin=(t,a,b)=>t>=a&&t<=b;
+function bump(t,a,b){if(t<a||t>b)return 0;const m=(a+b)/2;return smooth(1-Math.abs((t-m)/((b-a)/2)));}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x04050a,0.0040);
+const cam=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,0.1,3000);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+try{renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=RC.exposure;}catch(e){}
+document.body.appendChild(renderer.domElement);
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+function glowTex(){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
+  const gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.28,'rgba(255,255,255,.55)');gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=gr;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
+const GLOW=glowTex();
+
+// estrelas
+(function(){const g=new THREE.BufferGeometry();const n=900,p=new Float32Array(n*3);
+  for(let i=0;i<n;i++){const r=500+Math.random()*900,th=Math.random()*6.28,ph=Math.acos(2*Math.random()-1);
+    p[i*3]=r*Math.sin(ph)*Math.cos(th);p[i*3+1]=r*Math.sin(ph)*Math.sin(th);p[i*3+2]=r*Math.cos(ph);}
+  g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x223055,size:1.3,sizeAttenuation:false})));})();
+
+const rand=mulberry32(SPEC.campo.seed), R=SPEC.campo.raio;
+const temaCor={},temaDir={};
+SPEC.temas.forEach((tm,i)=>{temaCor[tm.id]=new THREE.Color(tm.cor);
+  const th=(i/SPEC.temas.length)*6.283+rand()*0.6,ph=Math.acos(2*((i+0.5)/SPEC.temas.length)-1);
+  temaDir[tm.id]=new THREE.Vector3(Math.sin(ph)*Math.cos(th),Math.cos(ph)*0.7,Math.sin(ph)*Math.sin(th)).normalize();});
+
+const SPH=new THREE.SphereGeometry(0.62,16,16), WHITE=new THREE.Color(0xffffff);
+
+// ── Fresnel rim material (Pilar IV: glow de borda "raio-X") ──
+function fresnelMat(baseCol){
+  return new THREE.ShaderMaterial({
+    uniforms:{uColor:{value:baseCol.clone()},uAct:{value:0.12},uRim:{value:RC.rimPow}},
+    vertexShader:`varying vec3 vN;varying vec3 vV;
+      void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`uniform vec3 uColor;uniform float uAct;uniform float uRim;varying vec3 vN;varying vec3 vV;
+      void main(){float f=pow(1.0-clamp(dot(vN,vV),0.0,1.0),uRim);
+        vec3 col=uColor*(0.22+uAct*0.7)+uColor*f*1.7+vec3(1.0)*f*uAct;
+        gl_FragColor=vec4(col,1.0);}`
+  });
+}
+function mkAtom(tema,massa,home){
+  let mat; try{mat=fresnelMat(temaCor[tema]);}catch(e){mat=new THREE.MeshBasicMaterial({color:temaCor[tema].clone()});}
+  const mesh=new THREE.Mesh(SPH,mat);mesh.position.copy(home);mesh.scale.setScalar(massa);
+  const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:temaCor[tema].clone(),transparent:true,opacity:.12,blending:THREE.AdditiveBlending,depthWrite:false}));
+  halo.scale.setScalar(massa*2.6);mesh.add(halo);scene.add(mesh);
+  return {tema,massa,home:home.clone(),newHome:home.clone(),mesh,mat,halo,baseCor:temaCor[tema].clone(),orbitAngle:0,recruited:false,role:null};
+}
+function setAct(a,act){
+  if(a.mat.uniforms){a.mat.uniforms.uAct.value=act;} else {a.mat.color.copy(a.baseCor).lerp(WHITE,act*0.5);}
+  a.halo.material.opacity=0.10+act*0.85; a.halo.scale.setScalar(a.massa*(2.2+act*2.2));
+}
+
+const atoms=[],temaIds=SPEC.temas.map(t=>t.id);
+for(let i=0;i<SPEC.campo.count;i++){
+  const tema=temaIds[Math.floor(rand()*temaIds.length)];
+  const dir=temaDir[tema].clone();
+  const home=dir.multiplyScalar(R*(0.45+rand()*0.5)).add(new THREE.Vector3(rand()-.5,rand()-.5,rand()-.5).multiplyScalar(R*0.42));
+  atoms.push(mkAtom(tema,0.6+rand()*1.6,home));
+}
+const giganteTema=SPEC.protagonistas.mitose.gigante_tema;
+let gigante=atoms.filter(a=>a.tema===giganteTema).sort((a,b)=>b.massa-a.massa)[0]||atoms[0];
+gigante.massa=3.0;gigante.mesh.scale.setScalar(3.0);gigante.halo.scale.setScalar(3*2.6);gigante.role="gigante";
+
+const qDir=temaDir["dados"].clone().add(temaDir["conteudo"]).normalize();
+const pool=atoms.filter(a=>a!==gigante);
+pool.forEach(a=>a._sc=a.home.clone().normalize().dot(qDir)+a.massa*0.05);
+pool.sort((a,b)=>b._sc-a._sc);
+const N=Math.min(SPEC.orbita.N,pool.length), recruited=pool.slice(0,N);
+recruited.forEach((a,i)=>{a.recruited=true;a.orbitAngle=(i/N)*6.283;});
+const centroid=new THREE.Vector3();recruited.forEach(a=>centroid.add(a.home));centroid.multiplyScalar(1/N);
+recruited.forEach(a=>a.newHome=a.home.clone().lerp(centroid,0.16));
+let paiA=recruited.find(a=>a.tema==="dados")||recruited[0];
+let paiB=recruited.find(a=>a.tema==="conteudo"&&a!==paiA)||recruited[1];
+paiA.role="paiA";paiB.role="paiB";
+const M=paiA.newHome.clone().add(paiB.newHome).multiplyScalar(0.5);
+
+// ── centro + onda + burst ──
+const centro=new THREE.Mesh(new THREE.SphereGeometry(SPEC.centro.raio,28,28),new THREE.MeshBasicMaterial({color:0xffffff}));scene.add(centro);
+const centroHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:0x9fc0ff,transparent:true,opacity:.5,blending:THREE.AdditiveBlending,depthWrite:false}));centroHalo.scale.setScalar(10);scene.add(centroHalo);
+const onda=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),new THREE.MeshBasicMaterial({color:0x7aa2ff,transparent:true,opacity:0,wireframe:true,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(onda);
+const burst=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),new THREE.MeshBasicMaterial({color:0xffe9a8,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(burst);
+
+// ── grade do espaço-tempo (gravidade literal) ──
+let warp,warpBase;
+(function(){
+  const segs=[],base=[];const rings=RC.warpRings,spokes=RC.warpSpokes,rmax=RC.warpRmax;
+  function P(r,a){return [Math.cos(a)*r,0,Math.sin(a)*r];}
+  for(let s=0;s<spokes;s++){const a=s/spokes*6.283;
+    for(let ri=0;ri<rings;ri++){const r0=rmax*(ri/rings),r1=rmax*((ri+1)/rings);
+      segs.push(...P(r0,a),...P(r1,a));}}
+  for(let ri=1;ri<=rings;ri++){const r=rmax*(ri/rings);
+    for(let s=0;s<spokes;s++){const a0=s/spokes*6.283,a1=(s+1)/spokes*6.283;
+      segs.push(...P(r,a0),...P(r,a1));}}
+  warpBase=new Float32Array(segs);
+  const arr=new Float32Array(segs);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(arr,3));
+  warp=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x2b4a8f,transparent:true,opacity:0.32,blending:THREE.AdditiveBlending}));
+  warp.position.y=-18;scene.add(warp);
+})();
+function updateWarp(t){
+  const a=warp.geometry.attributes.position.array, wave=inwin(t,2.0,4.5)?(t-2.0):-1;
+  for(let i=0;i<a.length;i+=3){const x=warpBase[i],z=warpBase[i+2],d=Math.hypot(x,z);
+    let y=-RC.warpDepth/(1+d*d/RC.warpK);                       // poço gravitacional
+    if(wave>=0)y+=Math.sin(d*0.18-wave*6.0)*Math.exp(-Math.abs(d-wave*26)*0.05)*4.0; // ondulação da chamada
+    y+=Math.sin(t*0.6+d*0.05)*0.5;                              // respiração
+    a[i+1]=y;}
+  warp.geometry.attributes.position.needsUpdate=true;
+}
+
+// ── disco de acreção (poço vivo) ──
+let acre,acreData;
+(function(){const n=RC.acrecao,p=new Float32Array(n*3);acreData=[];
+  for(let i=0;i<n;i++){acreData.push({r:6+rand()*22,a:rand()*6.283,y:(rand()-.5)*6,sp:0.5+rand()*1.2});}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  acre=new THREE.Points(g,new THREE.PointsMaterial({color:0xffd28a,size:1.5,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(acre);
+})();
+function updateAcre(t){
+  const op=inwin(t,3.0,9.5)?smooth(clamp((t-3.0)/1.5,0,1))*(t<8.5?0.9:smooth((9.5-t)/1.0)*0.9):0;
+  acre.material.opacity=op; if(op<=0)return;
+  const a=acre.geometry.attributes.position.array;
+  acreData.forEach((d,i)=>{d.a+=0.02*d.sp; d.r-=0.04*d.sp; if(d.r<3){d.r=22+rand()*6;}
+    a[i*3]=Math.cos(d.a)*d.r; a[i*3+1]=d.y*(d.r/22); a[i*3+2]=Math.sin(d.a)*d.r;});
+  acre.geometry.attributes.position.needsUpdate=true;
+}
+
+// ── teia ──
+const teiaPos=new Float32Array(N*2*3),teiaGeo=new THREE.BufferGeometry();
+teiaGeo.setAttribute('position',new THREE.BufferAttribute(teiaPos,3));
+const teia=new THREE.LineSegments(teiaGeo,new THREE.LineBasicMaterial({color:0x88aaff,transparent:true,opacity:0,blending:THREE.AdditiveBlending}));scene.add(teia);
+
+// ── fragmentos ──
+const frags=recruited.map(()=>{const s=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:0xffffff,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));s.scale.setScalar(1.6);scene.add(s);return s;});
+
+// ── filho da meiose ──
+const filhoCor=new THREE.Color(SPEC.protagonistas.meiose.filho_cor);
+let filhoMat;try{filhoMat=fresnelMat(filhoCor);}catch(e){filhoMat=new THREE.MeshBasicMaterial({color:filhoCor.clone()});}
+filhoMat.transparent=true;
+const filho=new THREE.Mesh(SPH,filhoMat);filho.position.copy(M);filho.scale.setScalar(0.01);scene.add(filho);
+const filhoHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color:filhoCor.clone(),transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));filho.add(filhoHalo);filhoHalo.scale.setScalar(4);
+const linMP=new Float32Array(2*2*3),linMG=new THREE.BufferGeometry();linMG.setAttribute('position',new THREE.BufferAttribute(linMP,3));
+const linMeiose=new THREE.LineSegments(linMG,new THREE.LineBasicMaterial({color:filhoCor.getHex(),transparent:true,opacity:0,blending:THREE.AdditiveBlending}));scene.add(linMeiose);
+
+// ── sombras da mitose ──
+const sombraDirs=["dados","clientes"],sombras=[];
+for(let i=0;i<SPEC.protagonistas.mitose.n_sombras;i++){const tm=sombraDirs[i%sombraDirs.length];
+  let sm;try{sm=fresnelMat(temaCor[tm]);}catch(e){sm=new THREE.MeshBasicMaterial({color:temaCor[tm].clone()});}sm.transparent=true;
+  const m=new THREE.Mesh(SPH,sm);m.position.copy(gigante.home);m.scale.setScalar(0.01);scene.add(m);
+  sombras.push({mesh:m,mat:sm,dest:gigante.home.clone().add(temaDir[tm].clone().multiplyScalar(R*0.22))});}
+
+function orbitPos(a,t){const ang=a.orbitAngle+(t-5.5)*SPEC.orbita.velocidade,rr=SPEC.orbita.raio;
+  return new THREE.Vector3(Math.cos(ang)*rr,Math.sin(ang*0.7)*rr*0.28,Math.sin(ang)*rr);}
+
+function update(t){
+  const ca=t*0.16+0.6,cr=92-bump(t,7.8,9.6)*16;
+  cam.position.set(Math.cos(ca)*cr,18+Math.sin(t*0.22)*6,Math.sin(ca)*cr);cam.lookAt(0,0,0);
+
+  for(const a of atoms){
+    let pos=a.home,act=0.12;
+    if(a.recruited){
+      if(t<2.8){pos=a.home;act=0.12+bump(t,2.0,2.9)*0.5;}
+      else if(t<5.5){const k=smooth((t-2.8)/2.7);pos=a.home.clone().lerp(orbitPos(a,5.5),k);act=lerp(0.2,1,k);}
+      else if(t<9.5){pos=orbitPos(a,t);act=1;}
+      else if(t<11.0){const k=smooth((t-9.5)/1.5);pos=orbitPos(a,9.5).lerp(a.newHome,k);act=lerp(1,0.16,k);}
+      else{pos=a.newHome;act=0.16;}
+      if((a.role==="paiA"||a.role==="paiB")&&t>=11.0){const k=smooth((t-11.0)/1.1);
+        const flank=M.clone().add((a.role==="paiA"?paiA.newHome:paiB.newHome).clone().sub(M).multiplyScalar(0.45));
+        pos=a.newHome.clone().lerp(flank,k);act=Math.max(act,0.5+bump(t,11.0,13.0)*0.5);}
+    } else {
+      const breathe=Math.sin(t*0.7+a.home.x)*0.4, push=bump(t,3.0,5.5)*(a===gigante?0:0.10);
+      pos=a.home.clone().multiplyScalar(1+push).add(new THREE.Vector3(0,breathe,0));
+      act=clamp(0.10+bump(t,2.2,3.2)*a.home.clone().normalize().dot(qDir)*0.5,0.08,0.7);
+    }
+    a.mesh.position.copy(pos);setAct(a,act);
+  }
+
+  let cb=0.45+bump(t,2.0,2.6)*0.7+smooth(clamp((t-5.5)/2.5,0,1))*0.5*(t<9.5?1:0)+bump(t,8.0,9.2)*1.4;
+  centro.scale.setScalar(1+bump(t,2.0,2.6)*0.5+bump(t,8.0,9.2)*0.8);
+  centroHalo.material.opacity=clamp(cb,0,1.6);centroHalo.scale.setScalar(9+cb*9);
+
+  if(inwin(t,2.0,3.3)){const k=(t-2.0)/1.3;onda.scale.setScalar(0.5+k*R*1.6);onda.material.opacity=(1-k)*0.55;}else onda.material.opacity=0;
+  if(inwin(t,8.0,9.4)){const k=(t-8.0)/1.4;burst.scale.setScalar(0.5+k*38);burst.material.opacity=(1-k)*0.5;}else burst.material.opacity=0;
+
+  updateWarp(t); updateAcre(t);
+
+  const teiaOp=inwin(t,3.2,9.5)?(0.06+smooth(clamp((t-3.2)/1.2,0,1))*0.5*(t<9.0?1:smooth((9.5-t)/0.5))):0;
+  teia.material.opacity=teiaOp;
+  if(teiaOp>0){recruited.forEach((a,i)=>{const b=i*6,p=a.mesh.position;teiaPos[b]=0;teiaPos[b+1]=0;teiaPos[b+2]=0;teiaPos[b+3]=p.x;teiaPos[b+4]=p.y;teiaPos[b+5]=p.z;});teiaGeo.attributes.position.needsUpdate=true;}
+
+  recruited.forEach((a,i)=>{const s=frags[i];if(inwin(t,5.7,8.2)){const u=((t-5.7)*0.85+i*0.13)%1;s.position.copy(a.mesh.position.clone().lerp(new THREE.Vector3(0,0,0),u));s.material.opacity=Math.sin(Math.PI*u)*0.9;}else s.material.opacity=0;});
+
+  if(t>=11.5){const k=smooth((t-11.5)/1.2);filho.scale.setScalar(0.01+k*1.05);
+    if(filhoMat.uniforms)filhoMat.uniforms.uAct.value=0.6+bump(t,12,13)*0.4;else filhoMat.opacity=k;
+    filhoHalo.material.opacity=0.2+k*0.7+bump(t,12,13)*0.4;filhoHalo.scale.setScalar(3+k*3);
+    const a=paiA.mesh.position,b=paiB.mesh.position,c=filho.position;
+    linMP.set([a.x,a.y,a.z,c.x,c.y,c.z,b.x,b.y,b.z,c.x,c.y,c.z]);linMG.attributes.position.needsUpdate=true;linMeiose.material.opacity=k*0.8;
+  } else {filhoHalo.material.opacity=0;linMeiose.material.opacity=0;filho.scale.setScalar(0.01);if(!filhoMat.uniforms)filhoMat.opacity=0;else filhoMat.uniforms.uAct.value=0;}
+
+  if(t>=13.0){const k=smooth((t-13.0)/1.4);gigante.mesh.scale.setScalar(3.0*(1-0.35*k));
+    sombras.forEach(s=>{s.mesh.position.copy(gigante.home.clone().lerp(s.dest,k));s.mesh.scale.setScalar(0.01+k*1.5);if(s.mat.uniforms)s.mat.uniforms.uAct.value=k*0.8;else s.mat.opacity=k*0.95;});
+  } else {gigante.mesh.scale.setScalar(3.0);sombras.forEach(s=>{s.mesh.scale.setScalar(0.01);if(s.mat.uniforms)s.mat.uniforms.uAct.value=0;else s.mat.opacity=0;});}
+
+  const f=SPEC.fases.find(f=>t>=f.t0&&t<f.t1)||SPEC.fases[SPEC.fases.length-1];
+  fase.textContent=f.nome;desc.textContent=f.desc;tEl.textContent=t.toFixed(1)+"s / "+DUR+"s";bar.style.width=(t/DUR*100)+"%";
+}
+
+legenda.innerHTML=SPEC.temas.map(tm=>tm.id+" <b style='background:"+tm.cor+"'></b>").join("<br>");
+const fase=document.getElementById('fase'),desc=document.getElementById('desc'),tEl=document.getElementById('t'),bar=document.getElementById('bar');
+
+let start=performance.now(),paused=false,pT=0,camOff=0,drag=false,px=0;
+renderer.domElement.addEventListener('click',()=>{if(paused)start=performance.now()-pT*1000;else pT=((performance.now()-start)/1000)%DUR;paused=!paused;});
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;});
+addEventListener('pointerup',()=>drag=false);
+addEventListener('pointermove',e=>{if(drag){camOff+=(e.clientX-px)*0.01;px=e.clientX;}});
+
+function frame(){requestAnimationFrame(frame);const t=paused?pT:((performance.now()-start)/1000)%DUR;update(t);scene.rotation.y=camOff;renderer.render(scene,cam);}
+frame();
+</script>
+</body>
+</html>
