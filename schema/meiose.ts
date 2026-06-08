@@ -1,176 +1,138 @@
 /**
- * Meiose — lógica de reprodução do conhecimento
- * =============================================
+ * Meiose — reprodução para APROFUNDAR (recombinação de dois pais)
+ * ==============================================================
  *
- * Implementação de referência (pseudo-código tipado) da meiose, com as 3
- * decisões travadas codificadas:
+ * Recombina dois átomos num filho de síntese. É onde a Gemini trabalha como
+ * motor de maturação. Decisões travadas:
  *
- *   §7.1 Escopo    → dois gatilhos: PLAYBOOK (constelação, N sucessos) e
- *                    DUPLA (par alma-gêmea, barra de co-uso ALTA)
- *   §7.2 Posição   → filho nasce no ponto médio dos pais, com linhagem
- *   §7.3 Direção   → fusão cross-domínio é PREFERIDA (barra menor)
+ *   Escopo    → dois gatilhos: DUPLA alma-gêmea (co-uso muito alto) e
+ *               PLAYBOOK (constelação que deu certo N vezes)
+ *   Direção   → cross-tema PREFERIDA (barra menor); mesmo-tema barra maior
+ *   Posição   → filho no ponto médio dos pais, com linhagem
+ *   Motor     → Gemini sintetiza o conteúdo do filho
  *
- * IMPORTANTE — gating de dado real: a meiose lê `co_usos` (lastro do
- * cooccurrence.jsonl). No cold-start `co_usos = 0`, então NADA nasce — e
- * isso está correto. A função só passa a gerar filhos quando o log tiver
- * corpo. Plugar ao grav-build quando isso acontecer.
+ * Gating de dado real: lê co-uso (co_orbitas). No cold-start = 0 → nada
+ * nasce, e isso é correto. Plugar ao grav-build quando o log tiver corpo.
  */
 
-import type { Atomo, Aresta, AtomoId, Constelacao, Dominio, Linhagem } from "./atomos";
+import type { Atomo, Aresta, AtomoId } from "./atomos";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Parâmetros (os "botões") — afinar com dado real, não no escuro
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const PARAMS = {
-  /** N sucessos para uma constelação cristalizar em playbook. */
-  N_SUCESSOS_PLAYBOOK: 4,
-
-  /** Barra ALTA de co-uso para uma dupla virar síntese (§7.1, controlado). */
-  CO_USOS_DUPLA: 12,
-  /** Peso w_ij mínimo para a dupla (reforça que andam MUITO juntos). */
-  W_DUPLA: 3.0,
-
-  /**
-   * Direção (§7.3): fusão cross-domínio é preferida → barra menor.
-   * Mesmo-domínio precisa de co-uso ainda mais alto para nascer.
-   */
-  CO_USOS_MESMO_DOMINIO: 20,
-
-  /** Não regerar um filho que já existe (anti-duplicata por linhagem). */
-} as const;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. GATILHO "DUPLA" — dois átomos alma-gêmea
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Decide se uma aresta (par) deve gerar um filho de síntese.
- * Aplica a barra alta, com a direção cross-domínio preferida.
- */
-export function duplaDeveGerar(
-  a: Atomo,
-  b: Atomo,
-  aresta: Aresta,
-): boolean {
-  const cross = a.dominio !== b.dominio;
-  // Direção (§7.3): cross-domínio tem barra menor; mesmo-domínio, barra maior.
-  const barraCoUso = cross
-    ? PARAMS.CO_USOS_DUPLA
-    : PARAMS.CO_USOS_MESMO_DOMINIO;
-
-  return aresta.co_usos >= barraCoUso && aresta.w >= PARAMS.W_DUPLA;
+/** Constelação coerente (saída do retrieval por subgrafo coeso). */
+export interface Constelacao {
+  atomos: AtomoId[];
+  temas: string[];
+  /** Sucessos acumulados — gatilho de cristalização em playbook. */
+  sucessos: number;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. GATILHO "PLAYBOOK" — constelação inteira comprovada
-// ─────────────────────────────────────────────────────────────────────────────
+export const PARAMS = {
+  N_SUCESSOS_PLAYBOOK: 4,
+  /** Barra ALTA de co-órbita para uma dupla cross-tema recombinar. */
+  CO_ORBITAS_CROSS: 12,
+  /** Mesmo-tema: barra ainda mais alta (direção prefere cross-tema). */
+  CO_ORBITAS_MESMO: 20,
+  W_MIN: 3.0,
+} as const;
+
+/** Motor de síntese — a Gemini, injetada (não acoplada). */
+export type Sintetizador = (pais: Atomo[]) => Promise<string>;
+
+function pontoMedio(ps: Atomo[]): [number, number, number] {
+  const n = ps.length;
+  return [
+    ps.reduce((s, p) => s + p.pos[0], 0) / n,
+    ps.reduce((s, p) => s + p.pos[1], 0) / n,
+    ps.reduce((s, p) => s + p.pos[2], 0) / n,
+  ];
+}
+
+// ── Gatilho DUPLA ────────────────────────────────────────────────────────────
+
+export function duplaDeveRecombinar(a: Atomo, b: Atomo, e: Aresta): boolean {
+  const cross = a.tema !== b.tema;
+  const barra = cross ? PARAMS.CO_ORBITAS_CROSS : PARAMS.CO_ORBITAS_MESMO;
+  return e.co_orbitas >= barra && e.w >= PARAMS.W_MIN;
+}
+
+export async function nascerDeDupla(
+  a: Atomo,
+  b: Atomo,
+  sintetizar: Sintetizador,
+  agora: string,
+): Promise<Atomo> {
+  const conteudo = await sintetizar([a, b]); // Gemini funde os dois pais
+  return {
+    id: `meiose_${a.id}_${b.id}`,
+    norm: `sintese-${a.norm}-${b.norm}`,
+    tema: a.massa >= b.massa ? a.tema : b.tema,
+    conteudo,
+    massa: ((a.massa + b.massa) / 2) * 0.5, // cria nasce leve
+    densidade: (a.densidade + b.densidade) / 2,
+    co_uso: 0,
+    pos: pontoMedio([a, b]),
+    origem: "meiose",
+    linhagem: {
+      pais: [a.id, b.id],
+      processo: "meiose",
+      cross_tema: a.tema !== b.tema,
+      nascido_em: agora,
+    },
+  };
+}
+
+// ── Gatilho PLAYBOOK ─────────────────────────────────────────────────────────
 
 export function constelacaoDeveCristalizar(c: Constelacao): boolean {
   return c.sucessos >= PARAMS.N_SUCESSOS_PLAYBOOK;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. NASCIMENTO — cria o filho (posição + linhagem, §7.2)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function pontoMedio(
-  pa: [number, number, number],
-  pb: [number, number, number],
-): [number, number, number] {
-  return [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, (pa[2] + pb[2]) / 2];
-}
-
-/** Domínio do filho: se cross, herda o domínio do pai de MAIOR massa. */
-function dominioDoFilho(a: Atomo, b: Atomo): Dominio {
-  return a.massa >= b.massa ? a.dominio : b.dominio;
-}
-
-export function nascerDeDupla(
-  a: Atomo,
-  b: Atomo,
-  conteudoSintese: string, // gerado pelo modelo a partir dos dois pais
-  agora: string,           // ISO-8601
-): Atomo {
-  const linhagem: Linhagem = {
-    pais: [a.id, b.id],
-    cross_dominio: a.dominio !== b.dominio,
-    nascido_em: agora,
-    gatilho: "dupla",
-  };
-  return {
-    id: `meiose_${a.id}_${b.id}`,
-    norm: `sintese-${a.norm}-${b.norm}`,
-    dominio: dominioDoFilho(a, b),
-    conteudo: conteudoSintese,
-    // massa inicial moderada: herda metade da média dos pais (ainda é cria)
-    massa: ((a.massa + b.massa) / 2) * 0.5,
-    idade: 0,
-    pos: pontoMedio(a.pos, b.pos), // §7.2: entre os pais
-    origem: "meiose",
-    tipo: "sintese",
-    linhagem,
-  };
-}
-
-export function nascerPlaybook(
+export async function nascerPlaybook(
   c: Constelacao,
-  atomosById: Map<AtomoId, Atomo>,
-  conteudoReceita: string,
+  byId: Map<AtomoId, Atomo>,
+  sintetizar: Sintetizador,
   agora: string,
-): Atomo {
-  const pais = c.atomos.map((id) => atomosById.get(id)!).filter(Boolean);
-  // centróide da constelação inteira
-  const cx = pais.reduce((s, p) => s + p.pos[0], 0) / pais.length;
-  const cy = pais.reduce((s, p) => s + p.pos[1], 0) / pais.length;
-  const cz = pais.reduce((s, p) => s + p.pos[2], 0) / pais.length;
+): Promise<Atomo> {
+  const pais = c.atomos.map((id) => byId.get(id)!).filter(Boolean);
+  const conteudo = await sintetizar(pais); // Gemini empacota a receita
   return {
     id: `playbook_${c.atomos.join("_").slice(0, 40)}`,
-    norm: `playbook-${c.dominios.join("-")}`,
-    dominio: dominioDoFilho(pais[0], pais[1] ?? pais[0]),
-    conteudo: conteudoReceita,
-    massa: 0.9, // playbook nasce âncora: é receita comprovada
-    idade: 0,
-    pos: [cx, cy, cz],
+    norm: `playbook-${c.temas.join("-")}`,
+    tema: pais[0].tema,
+    conteudo,
+    massa: 0.9, // playbook nasce âncora: receita comprovada
+    densidade: 0.9,
+    co_uso: 0,
+    pos: pontoMedio(pais),
     origem: "meiose",
-    tipo: "playbook",
     linhagem: {
-      pais: [c.atomos[0], c.atomos[c.atomos.length - 1]],
-      cross_dominio: c.dominios.length > 1,
+      pais: c.atomos,
+      processo: "meiose",
+      cross_tema: c.temas.length > 1,
       nascido_em: agora,
-      gatilho: "playbook",
     },
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. PASSADA DE MEIOSE — roda no grav-build, sobre o grafo já construído
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Passada de meiose (roda no grav-build; cross-tema primeiro) ───────────────
 
-/**
- * Varre o grafo e gera os filhos elegíveis. Anti-duplicata por linhagem.
- * No cold-start retorna [] (co_usos = 0) — correto.
- */
-export function passadaDeMeiose(
+export async function passadaDeMeiose(
   atomos: Atomo[],
   arestas: Aresta[],
   constelacoes: Constelacao[],
+  sintetizar: Sintetizador,
   agora: string,
-  sintetizar: (a: Atomo, b: Atomo) => string,        // chama o modelo
-  sintetizarReceita: (c: Constelacao) => string,      // chama o modelo
-): Atomo[] {
+): Promise<Atomo[]> {
   const byId = new Map(atomos.map((a) => [a.id, a]));
   const jaExiste = new Set(
-    atomos
-      .filter((a) => a.linhagem)
+    atomos.filter((a) => a.linhagem?.processo === "meiose")
       .map((a) => a.linhagem!.pais.slice().sort().join("|")),
   );
   const novos: Atomo[] = [];
 
-  // Direção (§7.3): cross-domínio primeiro
+  // Direção: cross-tema primeiro
   const ordenadas = [...arestas].sort((x, y) => {
-    const cx = byId.get(x.a)?.dominio !== byId.get(x.b)?.dominio ? 1 : 0;
-    const cy = byId.get(y.a)?.dominio !== byId.get(y.b)?.dominio ? 1 : 0;
+    const cx = byId.get(x.a)?.tema !== byId.get(x.b)?.tema ? 1 : 0;
+    const cy = byId.get(y.a)?.tema !== byId.get(y.b)?.tema ? 1 : 0;
     return cy - cx;
   });
 
@@ -179,15 +141,15 @@ export function passadaDeMeiose(
     if (!a || !b) continue;
     const chave = [a.id, b.id].sort().join("|");
     if (jaExiste.has(chave)) continue;
-    if (duplaDeveGerar(a, b, e)) {
-      novos.push(nascerDeDupla(a, b, sintetizar(a, b), agora));
+    if (duplaDeveRecombinar(a, b, e)) {
+      novos.push(await nascerDeDupla(a, b, sintetizar, agora));
       jaExiste.add(chave);
     }
   }
 
   for (const c of constelacoes) {
     if (constelacaoDeveCristalizar(c)) {
-      novos.push(nascerPlaybook(c, byId, sintetizarReceita(c), agora));
+      novos.push(await nascerPlaybook(c, byId, sintetizar, agora));
     }
   }
 

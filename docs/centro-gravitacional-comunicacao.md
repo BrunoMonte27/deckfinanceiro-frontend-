@@ -1,296 +1,205 @@
 # Centro Gravitacional de Comunicação
 
-> Memória viva da comunicação da Deck Financeiro. Em vez de guardar
-> conhecimento em pastas mortas, ele é organizado como um sistema de
-> corpos com massa que se atraem, formam constelações e — quando uma
-> combinação prova seu valor — geram conhecimento novo por meiose.
+> Memória **viva** da comunicação da Deck Financeiro. Não é um arquivo de
+> pastas — é um campo físico 3D onde cada fonte de informação é um corpo com
+> massa. O **centro** recebe a query, **emite uma onda** que varre o campo,
+> **atrai** as fontes ressonantes para órbita, **copia o fragmento de
+> interesse** de cada uma e **sintetiza** o resultado. Depois, as fontes
+> voltam ao campo **reposicionadas** pelo que foi usado junto. Com o tempo o
+> sistema **cresce** (mitose) e **se aprofunda** (meiose).
+
+> **Stack:** React + Vite + TypeScript · React Three Fiber (Three.js) para o
+> campo 3D. Embeddings para ressonância; Gemini (grátis) como motor de
+> recorte e de síntese.
 
 ---
 
-## 1. A metáfora, em uma frase
+## 1. A ideia central
 
-Cada coisa que a Deck aprende sobre como se comunicar vira um **átomo**.
-Átomos têm **massa**, se **atraem** por gravidade, se agrupam em
-**constelações** e podem **ter filhos** (meiose). No centro de tudo está o
-**centro gravitacional**: a identidade da marca, que puxa todo conhecimento
-novo para a mesma direção.
+A **física não é decoração — é o modelo de consumo.** A lei de atração que
+escolhemos decide quais fontes entram, em que ordem e a que custo. A
+representação gráfica é o espelho fiel disso: o que você **vê** é o que o
+sistema **faz**.
 
-A ideia inteira é que a memória não seja um arquivo — seja um organismo que
-**cresce, se reorganiza sozinho e cria** sínteses que ninguém escreveu à mão.
-
----
-
-## 2. Átomo
-
-O **átomo** é a menor unidade de conhecimento reutilizável de comunicação.
-Não é um documento; é uma peça de saber que pode ser combinada com outras.
-
-Exemplos de átomos:
-
-- *"Stories com enquete têm 2x mais resposta no nosso público"* (dado)
-- *"Arco de storytelling: tensão → virada → alívio"* (conteúdo)
-- *"Cor quente no CTA aumenta clique em público ansioso"* (neurodesign)
-- *"Cliente PJ responde melhor a prova social do que a desconto"* (clientes)
-
-### Anatomia de um átomo
-
-| Campo | O que é |
-|---|---|
-| `id` | Identificador único |
-| `dominio` | A que domínio pertence (ver §3) |
-| `conteudo` | O insight em si, em uma frase |
-| `massa` | Quão importante/provado ele é (ver §4) |
-| `conexoes` | Outros átomos com que ele costuma andar junto |
-| `origem` | De onde nasceu: observado, importado ou gerado por meiose |
-| `linhagem` | Se nasceu por meiose, quem foram os pais (ver §7.2) |
+O centro gravitacional é **ativo**, não uma âncora passiva. Cada query é um
+**comando** que nasce no centro e se propaga como **onda** pelo campo.
 
 ---
 
-## 3. Domínios
+## 2. Átomo (a fonte / o corpo)
 
-Todo átomo pertence a um **domínio** — a "cor" do conhecimento. Os domínios
-iniciais da Deck:
+A menor unidade de memória: uma fonte de informação registrada.
 
-- **Dados** — métricas, padrões de engajamento, resultados medidos.
-- **Conteúdo / Storytelling** — narrativa, arcos, tom de voz, ganchos.
-- **Neurodesign** — como a forma visual afeta a decisão (cor, ritmo, contraste).
-- **Clientes** — quem é o público, o que move cada segmento.
-
-Os domínios existem por um motivo central: a meiose **prefere cruzar
-domínios** (ver §7.3). Um filho que junta *dado* + *storytelling* vale mais
-do que dois dados fundidos, porque traz síntese de verdade.
-
----
-
-## 4. Massa e gravidade
+| Campo | O que é | Espelho visual |
+|---|---|---|
+| `id` / `norm` | identidade e chave de junção com o grafo | — |
+| `tema` | a "natureza" da fonte (cluster temático) | **cor** |
+| `massa` | densidade de conteúdo + co-uso acumulado | **tamanho** |
+| `pos` | coordenada 3D (x,y,z) | posição no campo |
+| `carga` | afinidade/repulsão com temas (permite empurrão) | — |
+| `linhagem` | se nasceu de meiose/mitose, de quem veio | — |
 
 ### Massa
 
-A **massa** de um átomo é o quanto ele está provado e em uso. Ela cresce
-quando o átomo:
+`massa = densidade_de_conteúdo + co_uso_acumulado`
 
-- é usado em uma peça de comunicação real,
-- participa de um resultado que deu certo,
-- é puxado por outros átomos repetidamente.
-
-Massa alta = âncora confiável. Massa baixa = ainda é hipótese.
-
-### Gravidade
-
-Dois átomos se **atraem** (gravidade) quando:
-
-- são **usados juntos** com frequência, e/ou
-- têm **afinidade de domínio** que faz sentido cruzar.
-
-Quanto mais andam juntos, mais forte a atração — e mais perto ficam no mapa.
-A gravidade é o que faz constelações se formarem **sozinhas**, sem ninguém
-organizar manualmente.
+- **Densidade** = quão rico/profundo é o conteúdo (não tamanho bruto).
+- **Co-uso** = quantas vezes já foi recrutada em queries (histórico de
+  utilidade).
+- **Sem autoridade, sem recência.** Peso é mérito × histórico, não pedigree.
+- **Monotônico:** co-uso só cresce. Não há decaimento (ver §6, Temperatura).
 
 ---
 
-## 5. Constelação
+## 3. Lei de atração — Híbrida
 
-Uma **constelação** é um grupo de átomos que a gravidade juntou: eles vivem
-sendo usados em conjunto e formam, na prática, uma **capacidade** ou um
-**padrão de campanha**.
+Uma fonte só é puxada se tiver **presença E sintonia**:
 
-Exemplo de constelação — *"Campanha de stories de interação"*:
-
-- `dado`: "enquete dobra resposta"
-- `conteúdo`: "arco tensão → virada → alívio"
-- `neurodesign`: "CTA quente em público ansioso"
-- `clientes`: "PJ responde a prova social"
-
-Quando essa constelação inteira **dá certo N vezes**, ela vira candidata a
-cristalizar num **playbook** (ver §7.4).
-
----
-
-## 6. Centro gravitacional
-
-No núcleo do mapa fica o **centro gravitacional**: os átomos de maior massa
-que representam a **identidade e o posicionamento da marca**. É o "sol" do
-sistema.
-
-Função do centro:
-
-- **Puxar** todo átomo novo para a direção da marca — conhecimento que
-  contradiz o centro fica na periferia, com pouca massa, até provar valor.
-- **Dar coerência**: duas constelações distantes ainda orbitam o mesmo
-  centro, então a comunicação não se fragmenta.
-
-O centro gravitacional é o que impede a memória de virar uma colcha de
-retalhos de táticas soltas.
-
----
-
-## 7. Meiose — como o conhecimento se reproduz
-
-A **meiose** é o coração do sistema: **dois átomos viram pais de um terceiro,
-novo** — uma **síntese** que junta o que os pais sabem numa coisa que nenhum
-deles era sozinho.
-
-> Exemplo: `"dados de engajamento de stories"` + `"arcos de storytelling"`
-> → nasce **`"stories que prendem, guiados pelos dados de engajamento"`**.
-
-Três decisões definem como a meiose funciona. **Todas travadas abaixo.**
-
-### 7.1 Escopo — com que facilidade nascem os filhos
-
-**Decisão: receitas inteiras (playbooks) + duplas alma-gêmea, com barra alta.**
-
-Um filho nasce em **dois casos**:
-
-1. **Receita inteira (playbook):** uma constelação completa que deu certo
-   **N vezes** cristaliza num playbook. (ver §7.4)
-2. **Dupla alma-gêmea:** apenas **dois** átomos que aparecem juntos um
-   **montão** de vezes se fundem num átomo de síntese — mesmo sem ser uma
-   campanha inteira. A **barra de co-uso é bem alta**, de propósito, para o
-   mapa não inchar de átomos sintéticos.
-
-Isso fica no meio-termo: cria conhecimento novo de forma rica, mas controlada.
-Nem só os grandes padrões comprovados (conservador demais), nem qualquer par
-que se encostou (generoso demais).
-
-### 7.2 Posição e linhagem do filho
-
-**Decisão: o filho nasce entre os pais, com tag de origem.**
-
-- Posição: o átomo-filho é colocado **no ponto médio** entre os pais no mapa
-  — ele herda a gravidade dos dois e orbita junto.
-- Linhagem: o filho carrega uma **tag de origem** apontando para os pais
-  (`linhagem: [pai_A, pai_B]`). Assim dá pra rastrear *de onde* veio toda
-  síntese e auditar a árvore de conhecimento.
-
-### 7.3 Direção — que tipo de fusão é preferida
-
-**Decisão: síntese cross-domínio preferida.**
-
-A meiose **prioriza cruzar domínios diferentes**. Fundir um *dado* com um
-*storytelling* é mais valioso do que fundir dois dados, porque o filho traz
-uma síntese real — uma ponte entre mundos — e não só um resumo.
-
-Fusões dentro do mesmo domínio ainda podem acontecer, mas têm prioridade
-menor e barra mais alta.
-
-### 7.4 Playbook
-
-O **playbook** é o tipo especial de filho: a cristalização de uma
-**constelação inteira que se provou**. É uma receita pronta.
-
-- Nasce quando uma constelação entrega resultado **N vezes**.
-- Empacota a combinação completa (dados + conteúdo + neurodesign + clientes)
-  num único átomo de massa alta, reutilizável de uma vez.
-- Exemplo: o playbook *"Campanha de stories de interação"* já traz a enquete,
-  o arco narrativo, o CTA quente e a prova social, prontos para aplicar.
-
----
-
-## 8. Ciclo de vida do conhecimento
-
-Para a memória ficar viva e não acumular lixo:
-
-- **Crescer:** átomo usado com sucesso ganha massa.
-- **Aproximar:** átomos co-usados são puxados pela gravidade.
-- **Reproduzir:** combinações provadas geram filhos (meiose).
-- **Enfraquecer:** átomo que passa muito tempo sem uso **perde massa** e
-  desce para a periferia — não é apagado, mas para de influenciar.
-
-Assim o centro gravitacional reflete sempre o que **está funcionando agora**.
-
----
-
-## 9. Glossário rápido
-
-| Termo | Significado |
-|---|---|
-| **Átomo** | Menor unidade de conhecimento de comunicação. |
-| **Domínio** | A "cor" do átomo: dados, conteúdo, neurodesign, clientes. |
-| **Massa** | Quão provado/em uso está um átomo. |
-| **Gravidade** | Atração entre átomos co-usados ou de domínios afins. |
-| **Constelação** | Grupo de átomos que a gravidade juntou. |
-| **Centro gravitacional** | Núcleo de identidade da marca que ancora tudo. |
-| **Meiose** | Dois átomos gerando um filho de síntese. |
-| **Linhagem** | Registro de quem foram os pais de um filho. |
-| **Playbook** | Filho que cristaliza uma constelação inteira comprovada. |
-
----
-
-## 10. Diagrama do mapa gravitacional
-
-O contrato de dados completo está em [`schema/atomos.ts`](../schema/atomos.ts).
-Visualmente, o mapa orbita um núcleo e cruza domínios:
-
-```mermaid
-flowchart TB
-    subgraph CENTRO["☀️ Centro gravitacional (identidade da marca)"]
-        sol["átomos de massa alta<br/>posicionamento"]
-    end
-
-    subgraph DADOS["🔵 Domínio: dados"]
-        d1["enquete dobra resposta"]
-    end
-    subgraph CONTEUDO["🟣 Domínio: conteúdo"]
-        c1["arco tensão→virada→alívio"]
-    end
-    subgraph NEURO["🟠 Domínio: neurodesign"]
-        n1["CTA quente p/ ansioso"]
-    end
-    subgraph CLIENTES["🟢 Domínio: clientes"]
-        cl1["PJ responde a prova social"]
-    end
-
-    sol -. gravidade .-> DADOS & CONTEUDO & NEURO & CLIENTES
-
-    d1 ==="w_ij alto"=== c1
-    d1 & c1 --> filho(["✨ MEIOSE cross-domínio<br/>'stories guiados por dados'<br/>(nasce entre os pais · linhagem)"])
-
-    DADOS & CONTEUDO & NEURO & CLIENTES -. N sucessos .-> pb[["📘 PLAYBOOK<br/>'campanha de stories de interação'"]]
-
-    classDef sintese fill:#fde68a,stroke:#d97706,color:#000;
-    classDef playbook fill:#bfdbfe,stroke:#2563eb,color:#000;
-    class filho sintese;
-    class pb playbook;
+```
+F = (massaᵅ · ressonânciaᵝ) / d²
 ```
 
-**Como ler:** linhas pontilhadas = gravidade (atração). Linha grossa
-`w_ij alto` = duas almas-gêmeas → geram um **filho de síntese** no ponto
-médio, com linhagem. A constelação inteira, após **N sucessos**, cristaliza
-num **playbook**.
+- **massa** — presença/autoridade da fonte (densidade + co-uso).
+- **ressonância** — sintonia semântica com a query (ver §4).
+- **d** — distância euclidiana no campo 3D.
+- **α, β** — os "botões" que equilibram presença vs sintonia (afinar com uso).
+
+Multiplicativo de propósito: massa alta sem ressonância **não** entra, e
+ressonância alta sem massa também não basta. Precisa dos dois.
 
 ---
 
-## 11. Visibilidade no cold-start (por que o mapa parece liso)
+## 4. Ressonância — o espectro da query
 
-Os 4 canais renderizam **diferenças de dado**. Sem lastro, o dado está
-uniforme — então o mapa parece liso. Mas nem todos os canais precisam de
-co-uso real:
+A query "soa" no campo. A ressonância é **semântica**, não textual:
 
-| Canal | Dirigido por | Visível no cold-start? |
+- A query e as fontes são codificadas em **embeddings**; a sintonia é a
+  proximidade vetorial (cosine). Sinônimos e temas relacionados ressoam
+  parcialmente — **harmônicos**.
+- Isso roda barato e cacheável, **fora** do caminho da Gemini.
+
+---
+
+## 5. O ciclo de uma query (o comando do centro)
+
+1. **Emissão.** A query nasce no centro e vira **onda** — propagação
+   **instantânea**, varre o campo inteiro de uma vez.
+2. **Cálculo de força.** Cada fonte calcula sua F (massa × ressonância / d²).
+   Fontes **não-afins** sofrem **repulsão ativa** (carga negativa) — são
+   empurradas, criando constelações nítidas.
+3. **Órbita / competição.** As **N = 12-15** fontes de maior força entram em
+   **órbita** do centro. O orçamento é fixo: uma fonte forte **expulsa** uma
+   fraca (saturação = competição por atenção).
+4. **Recorte do fragmento.** O centro copia só o **fragmento de interesse**
+   de cada orbiter. A **Gemini** lê e puxa a passagem precisa — em **uma
+   única chamada em lote** com todas as fontes orbitando (1 chamada/query,
+   não 12-15). A fonte original fica **intacta**.
+5. **Síntese.** Os fragmentos orbitando são fundidos no **resultado**.
+6. **Retorno reposicionado.** As fontes voltam ao campo. Hebbiano: as que
+   orbitaram juntas se **aproximam**; a repulsão afasta as não-afins. O campo
+   só se reorganiza **pelo uso** (inércia **média** — movimento visível, sem
+   caos).
+
+---
+
+## 6. Os botões da física (estado travado)
+
+| Botão | Decisão | Efeito |
 |---|---|---|
-| **Tamanho** | `massa` | ✅ **Sim** — *se* semeada de sinal estático |
-| **Brilho** | `idade` | ✅ **Sim** — vem da data do arquivo |
-| **Aresta quente** | `w_ij` | ❌ Não — tudo `w=1` até haver co-uso |
-| **Órbita** | atividade do turno | ❌ Não num mapa parado — só ao vivo numa query |
+| **Lei de atração** | Híbrida (massaᵅ·ressonânciaᵝ/d²) | presença E sintonia |
+| **Massa** | densidade + co-uso | mérito × histórico, sem recência |
+| **Ressonância** | harmônicos semânticos (embeddings) | casa significado, não palavra |
+| **Propagação** | instantânea | campo todo de uma vez |
+| **Repulsão** | ativa (carga negativa) | constelações nítidas, filtro nativo |
+| **Saturação** | N = 12-15 órbitas | competição por atenção |
+| **Temperatura** | sem decaimento | só o uso move; nada esfria sozinho |
+| **Inércia** | média | reorganização visível e estável |
+| **Consumo** | orbita + fragmento + retorno | fonte intacta, centro usa o recorte |
 
-Para o mapa **não** nascer liso, o grav-build deve **semear** massa e idade
-de sinais que já existem antes de qualquer co-uso:
-
-- **`massa` inicial** ← combinação de: grau no grafo (quantos vizinhos),
-  tamanho/riqueza do doc, e se está no centro gravitacional.
-- **`idade` inicial** ← data de criação/modificação do arquivo.
-
-Assim, ao abrir o cosmos pela 1ª vez, **tamanho e brilho já variam**. As
-arestas quentes e a órbita só acendem com uso real — isso é esperado, não bug.
-
-> Diagnóstico rápido: se até tamanho/brilho estão lisos, ou o grav-build não
-> rodou (falta `BRU_GRAV_BUILD=1 ... build_graph.py` + recarregar), ou ele
-> não semeia desses sinais estáticos. Os dois primeiros canais são o teste.
+> **Filosofia que emerge:** *o campo só se reorganiza pelo uso, nunca pelo
+> tempo.* O "esquecer" não está na memória (que é fiel e permanente) — está
+> no **orçamento de órbita** (atenção finita, transitória, por query).
+>
+> **Consequência consciente:** co-uso só cresce + sem decaimento ⇒ campeões
+> antigos permanecem centrais. Ganha-se estabilidade; aceita-se um viés de
+> vitória antiga. Botão futuro se incomodar: peso de recência suave no co-uso.
 
 ---
 
-## 12. Decisões travadas (resumo)
+## 7. Crescimento — Mitose
 
-1. **Escopo da meiose:** receitas inteiras + duplas alma-gêmea com barra alta.
-2. **Posição do filho:** entre os pais, com tag de origem (linhagem).
-3. **Direção da meiose:** síntese cross-domínio preferida.
+**Mitose = cópia fiel, para crescer.** Barata, sem LLM.
+
+- **Gatilho:** um átomo **disputado por temas/constelações distintas ao mesmo
+  tempo** se **divide**. Cada cópia passa a servir um tema e pode
+  **especializar** com o uso (drift).
+- Serve para crescer **onde há demanda** e para **reparar** átomos
+  degradados.
+- Cresce em **quantidade / alcance**.
+
+---
+
+## 8. Reprodução — Meiose
+
+**Meiose = recombinação de dois pais, para aprofundar.** É onde a **Gemini**
+trabalha como motor de maturação.
+
+- **Escopo (dois gatilhos):**
+  1. **Dupla alma-gêmea** — dois átomos com co-uso **muito alto** entre si se
+     recombinam (barra alta, controlada).
+  2. **Playbook** — uma constelação inteira que deu certo **N vezes**
+     cristaliza numa receita pronta.
+- **Direção:** fusão **cross-domínio preferida** (juntar temas distintos vale
+  mais que fundir iguais) — barra menor para cross, maior para mesmo-tema.
+- **Nascimento:** o filho nasce no **ponto médio** dos pais, com **linhagem**
+  (tag de origem rastreável).
+- **Motor:** a Gemini sintetiza o conteúdo do filho a partir dos dois pais.
+- Cresce em **qualidade / profundidade / diversidade**.
+
+---
+
+## 9. Dicionário visual (o espelho da física)
+
+| Propriedade gráfica | Grandeza física |
+|---|---|
+| **Cor** | tema (natureza da fonte) |
+| **Tamanho** | massa (densidade + co-uso) |
+| **Distância do centro** | relevância / afinidade de repouso |
+| **Raio de órbita** | força de atração *nesta* query |
+| **Brilho** | **ativação no turno** — acende quando recrutada, ao vivo |
+| **Migração pós-query** | reposicionamento Hebbiano |
+
+O **brilho = ativação** é o que torna as regras **visíveis na primeira
+query**: sem depender de lastro, as fontes recrutadas acendem e orbitam ao
+vivo quando você pergunta.
+
+---
+
+## 10. Papel da Gemini (grátis) e a cota
+
+A Gemini entra em **dois** pontos — e **só** neles, para não queimar a cota:
+
+1. **Recorte do fragmento** (por query): **1 chamada em lote** com todas as
+   fontes orbitando → todos os fragmentos de uma vez.
+2. **Síntese da meiose** (ocasional): funde dois pais num filho.
+
+A ressonância por query roda em **embeddings**, fora da Gemini. Net: ~1
+chamada Gemini por query — viável no plano grátis.
+
+---
+
+## 11. Decisões travadas (resumo)
+
+1. **Stack:** React + Vite + TS + React Three Fiber.
+2. **Lei:** híbrida, F = (massaᵅ·ressonânciaᵝ)/d².
+3. **Massa:** densidade de conteúdo + co-uso (sem autoridade/recência).
+4. **Ressonância:** harmônicos semânticos via embeddings.
+5. **Propagação:** instantânea.
+6. **Repulsão:** ativa (carga negativa).
+7. **Saturação:** N = 12-15 órbitas.
+8. **Temperatura:** sem decaimento (campo só move pelo uso).
+9. **Inércia:** média.
+10. **Consumo:** orbita → fragmento (Gemini em lote) → síntese → retorno Hebbiano.
+11. **Mitose:** divide quando disputado por temas distintos.
+12. **Meiose:** dupla/playbook · cross-domínio · Gemini · ponto médio + linhagem.
+13. **Visual:** cor=tema · tamanho=massa · distância=relevância · raio=força · brilho=ativação.
